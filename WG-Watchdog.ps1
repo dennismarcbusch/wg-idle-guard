@@ -25,7 +25,7 @@ function Write-Log([string]$m) {
 
 # Konfiguration lesen und validieren (die Datei ist für Benutzer beschreibbar!)
 function Get-Cfg {
-    $c = @{ Tunnel = ''; IdleMinutes = 30; MinBytes = [int64]4096 }
+    $c = @{ Tunnel = ''; IdleMinutes = 30; MinBytes = [int64]32768 }
     try {
         $j = Get-Content $CfgFile -Raw -ErrorAction Stop | ConvertFrom-Json
         if ($j.Tunnel -match '^[A-Za-z0-9_=+.-]{1,32}\z') { $c.Tunnel = [string]$j.Tunnel }

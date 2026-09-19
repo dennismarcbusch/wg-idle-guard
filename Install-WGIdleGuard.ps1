@@ -71,7 +71,7 @@ try {
     $cfgFile = Join-Path $Data 'config.json'
     $idle = 30
     if (Test-Path $cfgFile) { try { $idle = [int](Get-Content $cfgFile -Raw | ConvertFrom-Json).IdleMinutes } catch {} }
-    [pscustomobject]@{ Tunnel = $Tunnel; IdleMinutes = $idle; MinBytes = 4096 } |
+    [pscustomobject]@{ Tunnel = $Tunnel; IdleMinutes = $idle; MinBytes = 32768 } |
         ConvertTo-Json | Set-Content -Path $cfgFile -Encoding ASCII
 
     # Frühere Einzelskripte deaktivieren, damit sie nicht dazwischenfunken
