@@ -91,7 +91,9 @@ als Aktivität zählt. Dann hilft „Timer zurücksetzen“ oder eine längere L
 - Die Skripte sind unsigniert und werden mit `-ExecutionPolicy Bypass` gestartet; bei AppLocker/WDAC ggf. anpassen.
 - Es wird ein einzelner Tunnel überwacht.
 - Skriptdateien sind UTF-8 mit BOM (nötig für Windows PowerShell 5.1) und CRLF; `.gitattributes` erhält die Zeilenenden.
-- Status: ungetestet auf echter Hardware, bitte erst auf einem Testrechner prüfen.
+- Status: getestet auf einem Windows-11-Rechner mit einem Tunnel (Installation, Statusanzeige, Vorwarnung und
+  automatische Trennung im Leerlauf). Noch nicht geprüft: Standby/Aufwachen, Verbinden/Trennen als normaler Benutzer
+  ohne Adminrechte und die Deinstallation. Bitte vor dem Ausrollen auf einem Testrechner prüfen.
 
 ## Fehlerbehebung
 
