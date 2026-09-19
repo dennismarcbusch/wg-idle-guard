@@ -19,6 +19,11 @@ Bedienung über ein Tray-Symbol, keine Skriptkenntnisse nötig.
 
 Entfernen: `Uninstall.cmd`.
 
+**Hinweis zum ZIP-Download:** Dateien aus einem heruntergeladenen ZIP tragen eine Internet-Markierung
+(Zone.Identifier), Windows/SmartScreen kann dann beim Start von `Install.cmd` warnen oder blockieren.
+Vor dem Entpacken die ZIP-Datei per Rechtsklick → *Eigenschaften* → *Zulassen* entsperren
+(oder in PowerShell `Unblock-File` auf die entpackten Dateien anwenden).
+
 ## Aufbau
 
 | Datei | Aufgabe |
@@ -42,12 +47,46 @@ Konfiguration und Status in `C:\ProgramData\WGIdleGuard` (für Benutzer beschrei
 - `IdleMinutes`: Minuten ohne Aktivität bis zur Trennung (0 = aus), im Tray-Menü einstellbar
 - `MinBytes`: Bytes pro Minute, die noch als Aktivität zählen (Keepalives liegen darunter)
 
+Fehlt `IdleMinutes` oder `MinBytes`, oder ist der Wert ungültig, gelten die Standardwerte (30 bzw. 4096).
+`IdleMinutes` muss zwischen 0 und 1440 liegen, `Tunnel` darf nur `A-Z a-z 0-9 _ = + . -` enthalten (max. 32 Zeichen).
+
+## Funktionsweise der Aktivitätserkennung
+
+- Der Wächter prüft alle 5 Sekunden, ob der Tunnel läuft, und liest die Summe aus empfangenen und gesendeten Bytes
+  (`wg.exe show <tunnel> transfer`).
+- Die Bytes werden in **60-Sekunden-Fenstern** verglichen: Wurden im Fenster mehr als `MinBytes` übertragen,
+  gilt der Tunnel als aktiv und der Leerlauf-Timer beginnt von vorn. Keepalive-Pakete (wenige Bytes pro Minute)
+  bleiben darunter und halten den Tunnel deshalb nicht offen.
+- Der Timer startet, sobald der Wächter den laufenden Tunnel erstmals sieht (auch nach einem Neustart des Rechners).
+- Noch 2 Minuten vor Ablauf wechselt das Symbol auf orange und eine Meldung erscheint.
+  „Timer zurücksetzen“ oder ein Klick auf die Meldung startet die Leerlaufzeit neu.
+- Nach Ablauf trennt der Wächter den Tunnel (`wireguard.exe /uninstalltunnelservice`) und meldet das im Tray.
+- Die Bewertung erfolgt nur im 60-Sekunden-Raster; sehr kurze Leerlaufzeiten (1–2 Minuten) sind daher ungenau,
+  ab 15 Minuten spielt das keine Rolle.
+- **Standby/Ruhezustand:** Die Ruhezeit zählt als Leerlauf. Nach dem Aufwachen wird sofort getrennt, wenn die Leerlaufzeit
+  abgelaufen ist. Fließen unmittelbar nach dem Aufwachen mehr als `MinBytes` an Daten (z. B. Programme synchronisieren),
+  wertet der Wächter das als Aktivität, und die Trennung bleibt aus.
+
 ## Hinweise
 
 - Die Skripte sind unsigniert und werden mit `-ExecutionPolicy Bypass` gestartet; bei AppLocker/WDAC ggf. anpassen.
 - Es wird ein einzelner Tunnel überwacht.
 - Skriptdateien sind UTF-8 mit BOM (nötig für Windows PowerShell 5.1) und CRLF; `.gitattributes` erhält die Zeilenenden.
 - Status: ungetestet auf echter Hardware, bitte erst auf einem Testrechner prüfen.
+
+## Fehlerbehebung
+
+Log des Wächters: `C:\ProgramData\WGIdleGuard\watchdog.log` (wird bei 200 KB automatisch geleert).
+
+| Problem | Ursache / Lösung |
+|---|---|
+| Symbol ist **rot** („Wächterdienst nicht erreichbar“) | Der Wächter hat seit über 30 Sekunden keinen Status geschrieben. In der Aufgabenplanung prüfen, ob `WGIdleGuard-Watchdog` existiert und läuft (Rechtsklick → *Ausführen*); ggf. `Install.cmd` erneut ausführen. |
+| Kein Tray-Symbol | Startmenü → „WireGuard Auto-Trennung“ starten. Nach der Anmeldung startet die Aufgabe `WGIdleGuard-Tray` automatisch. Ein Symbol pro Benutzersitzung genügt, ein zweiter Start beendet sich selbst. |
+| „Verbinden“ bewirkt nichts | Im Log steht dann meist „Konfiguration für '…' nicht gefunden“: Der Tunnelname in `config.json` stimmt nicht mit einem WireGuard-Tunnel überein. Name korrigieren oder neu installieren. |
+| Tunnel wird getrennt, obwohl er benutzt wird | Der Datenverkehr liegt unter `MinBytes` pro Minute. `MinBytes` in `config.json` senken oder die Leerlaufzeit erhöhen. |
+| Tunnel wird nie getrennt | Im Tray-Menü ist „Nie“ gewählt, oder Hintergrundprogramme erzeugen ständig Datenverkehr über `MinBytes`. |
+| Installation bricht mit „WireGuard ist nicht installiert“ ab | WireGuard für Windows nach `C:\Program Files\WireGuard` installieren und mindestens einen Tunnel importieren. |
+| Umlaute erscheinen falsch | Skripte wurden ohne UTF-8-BOM gespeichert; Windows PowerShell 5.1 braucht das BOM (siehe Hinweise). |
 
 ## Lizenz
 
